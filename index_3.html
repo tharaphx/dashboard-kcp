@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fuel Ops Dashboard | ภาพรวมธุรกิจน้ำมันเชื้อเพลิง</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --surface-2:      #ffffff;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --grid-line:      #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --good:           #0ca30c;
+    --warning:        #fab219;
+    --serious:        #ec835a;
+    --critical:       #d03b3b;
+    --delta-good:     #006300;
+    --series-1: #2a78d6; /* blue */
+    --series-2: #eb6834; /* orange */
+    --series-3: #1baf7a; /* aqua */
+    --series-4: #eda100; /* yellow */
+    --series-5: #e87ba4; /* magenta */
+    --series-6: #008300; /* green */
+    --series-7: #4a3aa7; /* violet */
+    --series-8: #e34948; /* red */
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --surface-2:      #212120;
+    --page-plane:     #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --grid-line:      #2c2c2a;
+    --baseline:       #383835;
+    --border:         rgba(255,255,255,0.10);
+    --good:           #0ca30c;
+    --warning:        #fab219;
+    --serious:        #ec835a;
+    --critical:       #e66767;
+    --delta-good:     #0ca30c;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page-plane);
+    color: var(--text-primary);
+  }
+  header {
+    padding: 20px 28px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-1);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  header h1 { font-size: 18px; margin: 0; }
+  header .sub { font-size: 12.5px; color: var(--text-secondary); margin-top: 2px; }
+  .header-actions { display:flex; align-items:center; gap:10px; }
+  button.icon-btn {
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text-primary);
+    border-radius: 8px; padding: 7px 12px; font-size: 13px; cursor: pointer;
+  }
+  button.icon-btn:hover { background: var(--page-plane); }
+
+  .filter-bar {
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+    padding: 14px 28px; background: var(--surface-1); border-bottom: 1px solid var(--border);
+    position: sticky; top: 65px; z-index: 19;
+  }
+  .filter-bar label { font-size: 12px; color: var(--text-secondary); margin-right: 6px; }
+  .filter-bar select, .filter-bar input[type="search"] {
+    background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 10px; font-size: 13.5px;
+  }
+  .filter-bar input[type="search"] { width: 200px; }
+  #statusMsg { font-size: 12.5px; color: var(--text-muted); }
+  #statusMsg.err { color: var(--critical); }
+
+  main { padding: 20px 28px 60px; max-width: 1560px; margin: 0 auto; }
+  section.block { margin-bottom: 30px; }
+  h2.block-title {
+    font-size: 15px; font-weight: 600; margin: 0 0 12px; color: var(--text-primary);
+    display:flex; align-items:center; gap:8px;
+  }
+  h2.block-title .n { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+  h2.block-title .zone-tag {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; color: var(--text-muted);
+    border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px;
+  }
+
+  /* ---------- Zone 1: KPI cards ---------- */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap: 14px;
+  }
+  .card {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .kpi-label { font-size: 12.5px; color: var(--text-secondary); margin-bottom: 6px; }
+  .kpi-value { font-size: 25px; font-weight: 650; letter-spacing: -0.5px; }
+  .kpi-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .kpi-spark { height: 34px; margin: 6px 0 -4px; }
+  .delta { font-size: 12.5px; font-weight: 600; padding: 2px 7px; border-radius: 6px; display:inline-flex; align-items:center; gap:3px; margin-top:8px;}
+  .delta.up { color: var(--delta-good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+  .delta.down { color: var(--critical); background: color-mix(in srgb, var(--critical) 14%, transparent); }
+  .delta.flat { color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 12%, transparent); }
+
+  /* ---------- Zone 2: Exception panel ---------- */
+  .exception-list { display: flex; flex-direction: column; gap: 8px; }
+  .exception-row {
+    display: flex; align-items: center; gap: 12px; background: var(--surface-1);
+    border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px;
+    font-size: 13px;
+  }
+  .exception-row .sev-icon { font-size: 15px; width: 20px; text-align: center; flex-shrink:0; }
+  .exception-row .sev-label {
+    font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; flex-shrink:0;
+    display:inline-flex; align-items:center; gap:4px;
+  }
+  .exception-row.critical .sev-label { color: var(--critical); background: color-mix(in srgb, var(--critical) 15%, transparent); }
+  .exception-row.serious .sev-label { color: var(--serious); background: color-mix(in srgb, var(--serious) 18%, transparent); }
+  .exception-row.warning .sev-label { color: #8a6200; background: color-mix(in srgb, var(--warning) 25%, transparent); }
+  :root[data-theme="dark"] .exception-row.warning .sev-label { color: var(--warning); }
+  .exception-row .rule-name { color: var(--text-secondary); flex: 0 0 190px; }
+  .exception-row .veh-name { font-weight: 650; flex: 0 0 90px; }
+  .exception-row .value-text { font-variant-numeric: tabular-nums; font-weight: 600; flex: 0 0 140px; }
+  .exception-row .threshold-text { color: var(--text-muted); font-size: 12px; }
+  .exception-empty {
+    display:flex; align-items:center; gap:10px; background: var(--surface-1); border:1px solid var(--border);
+    border-radius: 10px; padding: 14px; color: var(--text-secondary); font-size: 13.5px;
+  }
+  @media (max-width: 760px) {
+    .exception-row { flex-wrap: wrap; }
+    .exception-row .rule-name, .exception-row .veh-name, .exception-row .value-text { flex: unset; }
+  }
+
+  /* ---------- Zone 3a: unified table ---------- */
+  .full-table-wrap { overflow-x: auto; }
+  table.data-table { width:100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  table.data-table th, table.data-table td { padding: 8px 10px; border-bottom: 1px solid var(--grid-line); vertical-align: middle; }
+  table.data-table th { color: var(--text-secondary); font-weight:600; cursor:pointer; user-select:none; position: sticky; top:0; background: var(--surface-1); white-space: nowrap; font-size: 11.5px; }
+  table.data-table th .sort-arrow { opacity: 0.5; font-size: 10px; margin-left: 2px; }
+  table.data-table th.sorted .sort-arrow { opacity: 1; }
+  table.data-table tbody tr { position: relative; }
+  table.data-table tbody tr:hover { background: var(--page-plane); }
+  table.data-table tbody tr.flagged { box-shadow: inset 3px 0 0 var(--critical); }
+  .bu-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 5px; background: var(--page-plane); border: 1px solid var(--border); color: var(--text-secondary); }
+  .veh-cell { display:flex; align-items:center; gap:6px; white-space: nowrap; }
+
+  .bar-track { position: relative; width: 100px; height: 14px; background: var(--page-plane); border-radius: 4px; overflow: visible; }
+  .bar-fill { position: absolute; left:0; top:0; height: 100%; border-radius: 4px; }
+  .bar-marker { position: absolute; top: -2px; width: 2px; height: 18px; background: var(--text-primary); opacity: .55; }
+  .bar-diverging { position: relative; width: 110px; height: 14px; background: var(--page-plane); border-radius: 4px; }
+  .bar-diverging .mid-line { position:absolute; left:50%; top:-2px; width:1px; height:18px; background: var(--baseline); }
+  .bar-diverging .seg { position:absolute; top:0; height:100%; }
+  .stack-mini { display:flex; width: 90px; height: 14px; border-radius: 4px; overflow:hidden; }
+  .cell-label { font-size: 11px; color: var(--text-secondary); margin-top: 2px; white-space: nowrap; }
+  .cell-flex { display:flex; flex-direction: column; gap: 2px; }
+  .foot-note { font-size: 11.5px; color: var(--text-muted); margin-top: 10px; }
+
+  /* ---------- Zone 3b: focus charts ---------- */
+  .focus-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(430px,1fr)); gap: 16px; }
+  .chart-card { background: var(--surface-1); border:1px solid var(--border); border-radius:12px; padding:16px 18px 10px; }
+  .chart-card h3 { font-size: 13.5px; margin: 0 0 2px; font-weight:600; }
+  .chart-card .desc { font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px; }
+  .chart-wrap { position: relative; height: 300px; }
+  .trend-pair { display: flex; gap: 14px; }
+  .trend-pair .trend-half { flex: 1; min-width: 0; }
+  .trend-pair .trend-half .chart-wrap { height: 150px; }
+  .trend-pair .trend-half h4 { font-size: 11.5px; margin: 0 0 4px; color: var(--text-secondary); font-weight: 600; }
+
+  #loadingOverlay {
+    position: fixed; inset:0; background: var(--page-plane); z-index: 100;
+    display:flex; align-items:center; justify-content:center; flex-direction:column; gap:10px;
+  }
+  .spinner { width:34px; height:34px; border-radius:50%; border:3px solid var(--grid-line); border-top-color: var(--series-1); animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 640px) {
+    header, .filter-bar, main { padding-left: 16px; padding-right: 16px; }
+    .filter-bar { top: 58px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div style="font-size:13px;color:var(--text-secondary)">กำลังโหลดข้อมูลจาก Google Sheet…</div>
+</div>
+
+<header>
+  <div>
+    <h1>ภาพรวมธุรกิจน้ำมันเชื้อเพลิง</h1>
+    <div class="sub">ขายปลีก-ขายส่ง-ขนส่งน้ำมันเชื้อเพลิง · ข้อมูลอัปเดตแบบเรียลไทม์จาก Google Sheet</div>
+  </div>
+  <div class="header-actions">
+    <span id="lastUpdated" class="kpi-sub"></span>
+    <button class="icon-btn" id="refreshBtn" title="โหลดข้อมูลใหม่">⟳ รีเฟรช</button>
+    <button class="icon-btn" id="themeBtn" title="สลับธีมสว่าง/มืด">🌓 ธีม</button>
+  </div>
+</header>
+
+<div class="filter-bar">
+  <div>
+    <label for="ymSelect">เดือน-ปี</label>
+    <select id="ymSelect"></select>
+  </div>
+  <div>
+    <label for="buSelect">หน่วยธุรกิจ (BU)</label>
+    <select id="buSelect"><option value="ALL">ทั้งหมด</option></select>
+  </div>
+  <div>
+    <label for="searchInput">ค้นหารถ/หน่วย</label>
+    <input type="search" id="searchInput" placeholder="เช่น M65, TR62…">
+  </div>
+  <span id="statusMsg"></span>
+</div>
+
+<main id="app" style="display:none;">
+
+  <section class="block">
+    <h2 class="block-title"><span class="zone-tag">ZONE 1</span> ภาพรวมประจำเดือน <span class="n" id="ovTitle"></span></h2>
+    <div class="kpi-grid">
+      <div class="card">
+        <div class="kpi-label">ยอดขายรวม (ลิตร)</div>
+        <div class="kpi-value" id="kpiLiters">–</div>
+        <div class="kpi-spark"><canvas id="sparkLiters"></canvas></div>
+        <div class="kpi-sub" id="kpiLitersSub"></div>
+        <div class="delta" id="kpiLitersDelta"></div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">กำไรขั้นต้นรวม (บาท)</div>
+        <div class="kpi-value" id="kpiGP">–</div>
+        <div class="kpi-spark"><canvas id="sparkGP"></canvas></div>
+        <div class="kpi-sub" id="kpiGPSub"></div>
+        <div class="delta" id="kpiGPDelta"></div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">น้ำมันขาด/เกินสุทธิ (ลิตร)</div>
+        <div class="kpi-value" id="kpiFuelDiff">–</div>
+        <div class="kpi-sub">รวมทุกคัน/หน่วย เดือนที่เลือก</div>
+        <div class="delta" id="kpiFuelDiffDelta"></div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">อัตราสิ้นเปลืองเฉลี่ยกองรถ (กม./ลิตร)</div>
+        <div class="kpi-value" id="kpiFuelRate">–</div>
+        <div class="kpi-sub">ถ่วงน้ำหนักด้วยระยะทางจริง</div>
+        <div class="delta" id="kpiFuelRateDelta"></div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">สัดส่วนเงินสด : เงินเชื่อ</div>
+        <div class="chart-wrap" style="height:110px;">
+          <canvas id="cashCreditDonut"></canvas>
+        </div>
+        <div class="kpi-sub" id="cashCreditLabel" style="text-align:center;"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title"><span class="zone-tag">ZONE 2</span> จุดที่ควรเฝ้าระวัง <span class="n" id="excTitle"></span></h2>
+    <div class="exception-list" id="exceptionList"></div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title"><span class="zone-tag">ZONE 3</span> ตารางประสิทธิภาพรายคัน/หน่วย <span class="n" id="vehTitle"></span></h2>
+    <div class="card full-table-wrap">
+      <table class="data-table" id="unifiedTable">
+        <thead>
+          <tr>
+            <th data-key="vehicle">รถ/หน่วย <span class="sort-arrow">↕</span></th>
+            <th data-key="liters">ยอดขายลิตร (ปีนี้ vs ปีก่อน) <span class="sort-arrow">↕</span></th>
+            <th data-key="pct">% YoY <span class="sort-arrow">↕</span></th>
+            <th data-key="fuelDiff">น้ำมันขาด/เกิน <span class="sort-arrow">↕</span></th>
+            <th data-key="gp">กำไรขั้นต้นรวม <span class="sort-arrow">↕</span></th>
+            <th data-key="gpPerLiter">กำไรขั้นต้น/ลิตร <span class="sort-arrow">↕</span></th>
+            <th data-key="costPerLiter">ต้นทุน/ลิตร <span class="sort-arrow">↕</span></th>
+            <th data-key="repair">ค่าซ่อม <span class="sort-arrow">↕</span></th>
+            <th data-key="fuelRate">อัตราการใช้น้ำมัน <span class="sort-arrow">↕</span></th>
+            <th data-key="cashPct">เงินสด : เงินเชื่อ <span class="sort-arrow">↕</span></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="foot-note">แถวที่มีแถบสีแดงด้านซ้าย = คันนี้ติดอยู่ในรายการเฝ้าระวัง (Zone 2) อย่างน้อย 1 ข้อ · ข้อมูลค่าซ่อมเป็นยอดรวมต่อคันต่อเดือนตามที่มีในต้นทาง ไม่มีรายการซ่อมย่อยรายวัน</div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title"><span class="zone-tag">ZONE 3</span> กราฟเจาะลึกที่ตารางแทนไม่ได้</h2>
+    <div class="focus-grid">
+      <div class="chart-card">
+        <h3>ความสัมพันธ์ ค่าซ่อม vs อัตราการใช้น้ำมัน</h3>
+        <div class="desc">แต่ละจุด = 1 คัน/หน่วย · ขนาดจุด = ยอดขายลิตร · สี = BU</div>
+        <div class="chart-wrap"><canvas id="scatterChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>น้ำมันขาด-เกินรายคัน (ขยาย)</h3>
+        <div class="desc">หน่วย: ลิตร (บวก = น้ำมันเกิน, ลบ = น้ำมันขาด)</div>
+        <div class="chart-wrap"><canvas id="fuelDiffBig"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>แนวโน้ม 12 เดือนย้อนหลัง</h3>
+        <div class="desc">ยอดขายลิตร และกำไรขั้นต้น แยกกราฟ (ไม่ใช้แกนคู่)</div>
+        <div class="trend-pair">
+          <div class="trend-half">
+            <h4>ยอดขายลิตร</h4>
+            <div class="chart-wrap"><canvas id="trendLiters"></canvas></div>
+          </div>
+          <div class="trend-half">
+            <h4>กำไรขั้นต้น (บาท)</h4>
+            <div class="chart-wrap"><canvas id="trendGP"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ---------------------------------------------------------------------
+// Robust library loader: tries several CDN mirrors for Chart.js and
+// PapaParse in sequence (some networks/firewalls/ad-blockers block one
+// CDN but not another). Everything else only runs once both libraries
+// are confirmed loaded.
+// ---------------------------------------------------------------------
+function loadScriptWithFallback(urls) {
+  return new Promise((resolve, reject) => {
+    let i = 0;
+    function tryNext() {
+      if (i >= urls.length) { reject(new Error('ทุก CDN โหลดไม่สำเร็จ')); return; }
+      const url = urls[i++];
+      const s = document.createElement('script');
+      s.src = url;
+      s.onload = () => resolve(url);
+      s.onerror = () => { s.remove(); tryNext(); };
+      document.head.appendChild(s);
+    }
+    tryNext();
+  });
+}
+
+async function bootstrap() {
+  const statusEl = document.getElementById('statusMsg');
+  try {
+    statusEl.textContent = 'กำลังโหลดไลบรารีสำหรับกราฟ…';
+    await loadScriptWithFallback([
+      'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js',
+      'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js',
+      'https://unpkg.com/papaparse@5.4.1/papaparse.min.js',
+    ]);
+    await loadScriptWithFallback([
+      'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js',
+      'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js',
+      'https://unpkg.com/chart.js@4.4.4/dist/chart.umd.min.js',
+    ]);
+    if (typeof Papa === 'undefined' || typeof Chart === 'undefined') {
+      throw new Error('ไลบรารีโหลดไม่สมบูรณ์');
+    }
+    loadData();
+  } catch (err) {
+    statusEl.textContent = 'โหลดไลบรารีสำหรับแสดงกราฟไม่สำเร็จ';
+    statusEl.classList.add('err');
+    document.getElementById('loadingOverlay').innerHTML =
+      '<div style="max-width:440px;text-align:center;font-size:13.5px;color:var(--text-secondary)">' +
+      'ไม่สามารถโหลดไลบรารีกราฟ (Chart.js / PapaParse) จากอินเทอร์เน็ตได้<br><br>' +
+      'สาเหตุที่พบบ่อย: เครือข่ายองค์กร/ไฟร์วอลล์/โปรแกรมแอนตี้ไวรัส หรือส่วนขยายบล็อกโฆษณาในเบราว์เซอร์ บล็อกการเชื่อมต่อไปยัง CDN ภายนอก' +
+      '<br><br>ลองวิธีเหล่านี้: ปิด ad-blocker ชั่วคราว, ลองเปิดหน้านี้บนเครือข่ายมือถือ (4G/5G) แทน Wi-Fi ที่ทำงาน, หรือลองเปิดด้วยเบราว์เซอร์อื่น' +
+      '<br><br><span style="color:var(--critical)">' + err.message + '</span></div>';
+  }
+}
+
+const SHEET_ID = '1Tyx1I5NJR1S-r5WiQX0_oAZ5AsIJo9zUZ98oPQ0TTg0';
+// Two endpoints are tried in order: the plain CSV export, then the gviz
+// endpoint (built for cross-origin embedding). Either works as long as the
+// sheet is shared as "Anyone with the link – Viewer".
+const CSV_URLS = [
+  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`,
+  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`,
+];
+
+const COLORS = () => {
+  const cs = getComputedStyle(document.documentElement);
+  return {
+    s1: cs.getPropertyValue('--series-1').trim(),
+    s2: cs.getPropertyValue('--series-2').trim(),
+    s3: cs.getPropertyValue('--series-3').trim(),
+    s4: cs.getPropertyValue('--series-4').trim(),
+    s6: cs.getPropertyValue('--series-6').trim(),
+    good: cs.getPropertyValue('--good').trim(),
+    critical: cs.getPropertyValue('--critical').trim(),
+    text: cs.getPropertyValue('--text-primary').trim(),
+    textSecondary: cs.getPropertyValue('--text-secondary').trim(),
+    muted: cs.getPropertyValue('--text-muted').trim(),
+    grid: cs.getPropertyValue('--grid-line').trim(),
+    surface: cs.getPropertyValue('--surface-1').trim(),
+  };
+};
+
+function parseNum(raw) {
+  if (raw === undefined || raw === null) return 0;
+  let s = String(raw).trim();
+  if (s === '') return 0;
+  let neg = false;
+  if (s.startsWith('(') && s.endsWith(')')) { neg = true; s = s.slice(1, -1); }
+  s = s.replace(/,/g, '').trim();
+  let n = parseFloat(s);
+  if (isNaN(n)) return 0;
+  return neg ? -n : n;
+}
+
+function fmt(n, d = 0) {
+  return n.toLocaleString('th-TH', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+function fmtSigned(n, d = 0) {
+  const s = fmt(Math.abs(n), d);
+  return (n < 0 ? '-' : (n > 0 ? '+' : '')) + s;
+}
+function avg(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0; }
+function stddev(arr) {
+  if (arr.length < 2) return 0;
+  const m = avg(arr);
+  return Math.sqrt(avg(arr.map(v => (v - m) ** 2)));
+}
+function median(arr) {
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+function pct(cur, prev) {
+  if (!prev) return cur ? null : 0;
+  return ((cur - prev) / Math.abs(prev)) * 100;
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+let RAW = [];        // parsed records
+let STATE = { ym: null, bu: 'ALL', search: '', sortKey: 'liters', sortDir: 'desc' };
+let CHARTS = {};
+
+async function loadData() {
+  const statusEl = document.getElementById('statusMsg');
+  try {
+    statusEl.textContent = 'กำลังเชื่อมต่อ Google Sheet…';
+    statusEl.classList.remove('err');
+    let text = null, lastErr = null;
+    for (const url of CSV_URLS) {
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        text = await res.text();
+        if (text && text.trim()) break;
+      } catch (e) { lastErr = e; }
+    }
+    if (!text) throw (lastErr || new Error('ไม่สามารถเชื่อมต่อได้'));
+    const parsed = Papa.parse(text.trim(), { skipEmptyLines: true });
+    const rows = parsed.data;
+    RAW = rows.slice(1).filter(r => r.length > 2 && r[1]).map(r => ({
+      bu: (r[0] || '').trim(),
+      ym: (r[1] || '').trim(),
+      vehicle: (r[2] || '').trim(),
+      cashL: parseNum(r[3]),
+      creditL: parseNum(r[4]),
+      cashTHB: parseNum(r[5]),
+      creditTHB: parseNum(r[6]),
+      costTHB: parseNum(r[7]),
+      grossProfit: parseNum(r[8]),
+      trips: parseNum(r[9]),
+      distanceKm: parseNum(r[10]),
+      fuelFilled: parseNum(r[11]),
+      fuelDiff: parseNum(r[12]),
+      fuelRate: parseNum(r[13]),
+      repairCost: parseNum(r[14]),
+    }));
+    document.getElementById('lastUpdated').textContent =
+      'อัปเดตล่าสุด: ' + new Date().toLocaleString('th-TH');
+    statusEl.textContent = `โหลดข้อมูลสำเร็จ (${RAW.length} แถว)`;
+    initFilters();
+    renderAll();
+    document.getElementById('loadingOverlay').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+  } catch (err) {
+    statusEl.textContent = 'โหลดข้อมูลไม่สำเร็จ: ตรวจสอบว่า Google Sheet เปิดสิทธิ์ "ทุกคนที่มีลิงก์ - ดูได้" (' + err.message + ')';
+    statusEl.classList.add('err');
+    document.getElementById('loadingOverlay').innerHTML =
+      '<div style="max-width:420px;text-align:center;font-size:13.5px;color:var(--text-secondary)">' +
+      'ไม่สามารถโหลดข้อมูลจาก Google Sheet ได้<br><br>กรุณาตรวจสอบว่าตั้งค่าการแชร์ชีตเป็น "ทุกคนที่มีลิงก์ - ผู้ดู" แล้วลองรีเฟรชหน้านี้อีกครั้ง' +
+      '<br><br><span style="color:var(--critical)">' + err.message + '</span></div>';
+  }
+}
+
+function prevYearYM(ym) {
+  const [y, m] = ym.split('-');
+  return (parseInt(y, 10) - 1) + '-' + m;
+}
+function prevMonthYM(ym) {
+  let [y, m] = ym.split('-').map(Number);
+  m -= 1;
+  if (m < 1) { m = 12; y -= 1; }
+  return y + '-' + String(m).padStart(2, '0');
+}
+function monthsTrailing(ym, n) {
+  const list = [ym];
+  let cur = ym;
+  for (let i = 1; i < n; i++) { cur = prevMonthYM(cur); list.unshift(cur); }
+  return list;
+}
+
+function initFilters() {
+  const months = [...new Set(RAW.map(r => r.ym))].sort();
+  const bus = [...new Set(RAW.map(r => r.bu))].sort();
+  const ymSelect = document.getElementById('ymSelect');
+  const buSelect = document.getElementById('buSelect');
+  const searchInput = document.getElementById('searchInput');
+  ymSelect.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
+  ymSelect.value = months[months.length - 1];
+  STATE.ym = ymSelect.value;
+  bus.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b; opt.textContent = b;
+    buSelect.appendChild(opt);
+  });
+  ymSelect.addEventListener('change', () => { STATE.ym = ymSelect.value; renderAll(); });
+  buSelect.addEventListener('change', () => { STATE.bu = buSelect.value; renderAll(); });
+  searchInput.addEventListener('input', () => { STATE.search = searchInput.value.trim().toLowerCase(); renderTable(LAST_ROWDATA); });
+
+  document.querySelectorAll('#unifiedTable thead th').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.getAttribute('data-key');
+      if (STATE.sortKey === key) { STATE.sortDir = STATE.sortDir === 'desc' ? 'asc' : 'desc'; }
+      else { STATE.sortKey = key; STATE.sortDir = 'desc'; }
+      renderTable(LAST_ROWDATA);
+    });
+  });
+}
+
+function getRows(ym, bu) {
+  return RAW.filter(r => r.ym === ym && (bu === 'ALL' || r.bu === bu));
+}
+
+function destroyChart(id) {
+  if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; }
+}
+
+function byVeh(rows) {
+  const m = {};
+  rows.forEach(r => {
+    if (!m[r.vehicle]) m[r.vehicle] = { cashL: 0, creditL: 0, cashTHB: 0, creditTHB: 0, costTHB: 0, grossProfit: 0,
+      fuelDiff: 0, fuelRate: [], repairCost: 0, distanceKm: 0, fuelFilled: 0, trips: 0, bu: r.bu };
+    const v = m[r.vehicle];
+    v.cashL += r.cashL; v.creditL += r.creditL; v.cashTHB += r.cashTHB; v.creditTHB += r.creditTHB;
+    v.costTHB += r.costTHB; v.grossProfit += r.grossProfit; v.fuelDiff += r.fuelDiff;
+    if (r.fuelRate) v.fuelRate.push(r.fuelRate);
+    v.repairCost += r.repairCost; v.distanceKm += r.distanceKm; v.fuelFilled += r.fuelFilled; v.trips += r.trips;
+  });
+  return m;
+}
+
+let LAST_ROWDATA = [];
+
+function renderAll() {
+  const c = COLORS();
+  const ym = STATE.ym, bu = STATE.bu;
+  const pYm = prevYearYM(ym);
+  const mYm = prevMonthYM(ym);
+  const curRows = getRows(ym, bu);
+  const prevRows = getRows(pYm, bu);
+  const prevMonthRows = getRows(mYm, bu);
+
+  document.getElementById('ovTitle').textContent = `— ${ym} เทียบ ${pYm}`;
+  document.getElementById('excTitle').textContent = `— ${ym}`;
+  document.getElementById('vehTitle').textContent = `— ${ym}`;
+
+  const sum = (rows, key) => rows.reduce((a, r) => a + r[key], 0);
+  const curLiters = sum(curRows, 'cashL') + sum(curRows, 'creditL');
+  const prevLiters = sum(prevRows, 'cashL') + sum(prevRows, 'creditL');
+  const curRevenue = sum(curRows, 'cashTHB') + sum(curRows, 'creditTHB');
+  const prevRevenue = sum(prevRows, 'cashTHB') + sum(prevRows, 'creditTHB');
+  const curGP = sum(curRows, 'grossProfit');
+  const prevGP = sum(prevRows, 'grossProfit');
+  const curFuelDiff = sum(curRows, 'fuelDiff');
+  const prevFuelDiff = sum(prevRows, 'fuelDiff');
+  const curMargin = curRevenue > 0 ? 100 * curGP / curRevenue : 0;
+
+  const curFleetDist = sum(curRows, 'distanceKm'), curFleetFuel = sum(curRows, 'fuelFilled');
+  const curFleetRate = curFleetFuel > 0 ? curFleetDist / curFleetFuel : 0;
+  const prevMonthDist = sum(prevMonthRows, 'distanceKm'), prevMonthFuel = sum(prevMonthRows, 'fuelFilled');
+  const prevMonthFleetRate = prevMonthFuel > 0 ? prevMonthDist / prevMonthFuel : 0;
+
+  // ---- KPI cards ----
+  setKpi('kpiLiters', fmt(curLiters), 'kpiLitersSub', `฿${fmt(curRevenue)} · ปีก่อน ${fmt(prevLiters)} ลิตร`, 'kpiLitersDelta', pct(curLiters, prevLiters));
+  setKpi('kpiGP', '฿' + fmt(curGP), 'kpiGPSub', `Margin ${fmt(curMargin, 1)}% · ปีก่อน ฿${fmt(prevGP)}`, 'kpiGPDelta', pct(curGP, prevGP));
+
+  document.getElementById('kpiFuelDiff').textContent = fmtSigned(curFuelDiff);
+  document.getElementById('kpiFuelDiff').style.color = curFuelDiff < 0 ? c.critical : (curFuelDiff > 0 ? c.good : c.text);
+  renderDelta('kpiFuelDiffDelta', pct(curFuelDiff, prevFuelDiff));
+
+  document.getElementById('kpiFuelRate').textContent = fmt(curFleetRate, 2);
+  renderDelta('kpiFuelRateDelta', pct(curFleetRate, prevMonthFleetRate), 'เทียบเดือนก่อน (MoM)');
+
+  const curCashL = sum(curRows, 'cashL'), curCreditL = sum(curRows, 'creditL');
+  const totCL = curCashL + curCreditL || 1;
+  document.getElementById('cashCreditLabel').textContent =
+    `เงินสด ${fmt(100 * curCashL / totCL, 1)}% · เงินเชื่อ ${fmt(100 * curCreditL / totCL, 1)}%`;
+
+  destroyChart('donut');
+  CHARTS.donut = new Chart(document.getElementById('cashCreditDonut'), {
+    type: 'doughnut',
+    data: { labels: ['เงินสด', 'เงินเชื่อ'], datasets: [{ data: [curCashL, curCreditL], backgroundColor: [c.s1, c.s3], borderWidth: 2, borderColor: c.surface }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '65%',
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1 } },
+    },
+  });
+
+  // ---- Sparklines: trailing 12 months, current BU filter ----
+  const trailMonths = monthsTrailing(ym, 12);
+  const trailLitersArr = trailMonths.map(m => { const rs = getRows(m, bu); return sum(rs, 'cashL') + sum(rs, 'creditL'); });
+  const trailGPArr = trailMonths.map(m => sum(getRows(m, bu), 'grossProfit'));
+  sparkline('sparkLiters', trailLitersArr, c.s1, c);
+  sparkline('sparkGP', trailGPArr, c.s6, c);
+
+  // ---- Per-vehicle aggregation ----
+  const vehicles = [...new Set(curRows.map(r => r.vehicle))];
+  const curByVeh = byVeh(curRows);
+  const prevByVeh = byVeh(prevRows);
+
+  const rowData = vehicles.map(v => {
+    const cv = curByVeh[v];
+    const litersCur = cv.cashL + cv.creditL;
+    const pv = prevByVeh[v];
+    const litersPrev = pv ? pv.cashL + pv.creditL : null;
+    const pctYoY = litersPrev ? pct(litersCur, litersPrev) : null;
+    const fuelRateAvg = cv.fuelFilled > 0 ? cv.distanceKm / cv.fuelFilled : (cv.fuelRate.length ? avg(cv.fuelRate) : 0);
+    return {
+      vehicle: v, bu: cv.bu,
+      liters: litersCur, litersPrev,
+      pct: pctYoY,
+      fuelDiff: cv.fuelDiff,
+      gp: cv.grossProfit,
+      gpPerLiter: litersCur > 0 ? cv.grossProfit / litersCur : 0,
+      costPerLiter: litersCur > 0 ? cv.costTHB / litersCur : 0,
+      repair: cv.repairCost,
+      fuelRate: fuelRateAvg,
+      cashPct: litersCur > 0 ? 100 * cv.cashL / litersCur : 0,
+      creditPct: litersCur > 0 ? 100 * cv.creditL / litersCur : 0,
+    };
+  });
+  LAST_ROWDATA = rowData;
+
+  // ---- Zone 2: exception rules ----
+  renderExceptions(rowData, c);
+
+  // ---- Zone 3a: unified table ----
+  renderTable(rowData);
+
+  // ---- Zone 3b: focus charts ----
+  renderScatter(rowData, c);
+  renderFuelDiffBig(rowData, c);
+  renderTrend(trailMonths, trailLitersArr, trailGPArr, c);
+}
+
+function setKpi(valueId, valueText, subId, subText, deltaId, pctVal) {
+  document.getElementById(valueId).textContent = valueText;
+  document.getElementById(subId).textContent = subText;
+  renderDelta(deltaId, pctVal);
+}
+function renderDelta(id, pctVal, labelSuffix) {
+  const el = document.getElementById(id);
+  const suffix = labelSuffix && typeof labelSuffix === 'string' && labelSuffix.indexOf('เทียบ') === 0 ? labelSuffix : 'เทียบปีก่อน';
+  if (pctVal === null || pctVal === undefined) { el.textContent = 'ไม่มีข้อมูลเทียบ'; el.className = 'delta flat'; return; }
+  const up = pctVal >= 0;
+  el.textContent = (up ? '▲ ' : '▼ ') + fmt(Math.abs(pctVal), 1) + '% ' + suffix;
+  el.className = 'delta ' + (Math.abs(pctVal) < 0.05 ? 'flat' : (up ? 'up' : 'down'));
+}
+
+function sparkline(canvasId, values, color, c) {
+  destroyChart(canvasId);
+  CHARTS[canvasId] = new Chart(document.getElementById(canvasId), {
+    type: 'line',
+    data: { labels: values.map((_, i) => i), datasets: [{ data: values, borderColor: color, borderWidth: 2, pointRadius: 0, tension: 0.3, fill: false }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { x: { display: false }, y: { display: false } },
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1,
+        callbacks: { label: (ctx) => fmt(ctx.parsed.y) },
+      } },
+      elements: { line: { borderCapStyle: 'round' } },
+    },
+  });
+}
+
+// ---------------------------------------------------------------------
+// Zone 2 — Exception & Alert rules
+// ---------------------------------------------------------------------
+function renderExceptions(rowData, c) {
+  const alerts = [];
+  const withLiters = rowData.filter(r => r.liters > 0);
+
+  // Rule 1: fuel shortage, top offenders beyond -100L
+  rowData.filter(r => r.fuelDiff < -100).sort((a, b) => a.fuelDiff - b.fuelDiff).slice(0, 3).forEach(r => {
+    alerts.push({
+      severity: r.fuelDiff < -300 ? 'critical' : 'serious',
+      icon: r.fuelDiff < -300 ? '🔴' : '⚠️',
+      rule: 'น้ำมันขาดสูงสุด', vehicle: r.vehicle,
+      valueText: fmtSigned(r.fuelDiff, 0) + ' ลิตร',
+      thresholdText: 'เกณฑ์: ขาดเกิน 100 ลิตร',
+    });
+  });
+
+  // Rule 2: repair cost statistical outlier (mean + 1.5*SD)
+  const repairVals = rowData.map(r => r.repair);
+  const repairMean = avg(repairVals), repairSd = stddev(repairVals);
+  if (repairSd > 0) {
+    rowData.filter(r => r.repair > repairMean + 1.5 * repairSd).sort((a, b) => b.repair - a.repair).forEach(r => {
+      alerts.push({
+        severity: 'warning', icon: '⚠️',
+        rule: 'ค่าซ่อมสูงผิดปกติ', vehicle: r.vehicle,
+        valueText: '฿' + fmt(r.repair),
+        thresholdText: `สูงกว่าค่าเฉลี่ยกองรถ (฿${fmt(repairMean)}) ${fmt(r.repair / (repairMean || 1), 1)} เท่า`,
+      });
+    });
+  }
+
+  // Rule 3: fuel rate worse than fleet median by 20%+
+  const fuelRates = rowData.filter(r => r.fuelRate > 0).map(r => r.fuelRate);
+  const fuelMedian = median(fuelRates);
+  if (fuelMedian > 0) {
+    rowData.filter(r => r.fuelRate > 0 && r.fuelRate < fuelMedian * 0.8).sort((a, b) => a.fuelRate - b.fuelRate).forEach(r => {
+      alerts.push({
+        severity: 'warning', icon: '⚠️',
+        rule: 'สิ้นเปลืองน้ำมันเกินเกณฑ์', vehicle: r.vehicle,
+        valueText: fmt(r.fuelRate, 2) + ' กม./ล.',
+        thresholdText: `ต่ำกว่ามัธยฐานกองรถ (${fmt(fuelMedian, 2)} กม./ล.) เกิน 20%`,
+      });
+    });
+  }
+
+  // Rule 4: YoY liters drop > 20%
+  rowData.filter(r => r.pct !== null && r.pct <= -20).sort((a, b) => a.pct - b.pct).forEach(r => {
+    alerts.push({
+      severity: 'serious', icon: '⚠️',
+      rule: 'ยอดขายลดฮวบเทียบปีก่อน', vehicle: r.vehicle,
+      valueText: fmt(r.pct, 1) + '%',
+      thresholdText: 'เกณฑ์: ลดลงเกิน 20% เทียบเดือนเดียวกันปีก่อน',
+    });
+  });
+
+  // Rule 5: gross profit per liter low/negative outlier
+  const gpVals = withLiters.map(r => r.gpPerLiter);
+  const gpMean = avg(gpVals), gpSd = stddev(gpVals);
+  withLiters.filter(r => r.gpPerLiter < 0 || (gpSd > 0 && r.gpPerLiter < gpMean - 1.5 * gpSd)).sort((a, b) => a.gpPerLiter - b.gpPerLiter).forEach(r => {
+    alerts.push({
+      severity: r.gpPerLiter < 0 ? 'critical' : 'warning',
+      icon: r.gpPerLiter < 0 ? '🔴' : '⚠️',
+      rule: 'กำไรขั้นต้น/ลิตรต่ำผิดปกติ', vehicle: r.vehicle,
+      valueText: fmt(r.gpPerLiter, 2) + ' บาท/ล.',
+      thresholdText: r.gpPerLiter < 0 ? 'ติดลบ' : `ต่ำกว่าค่าเฉลี่ยกองรถอย่างมีนัยสำคัญ`,
+    });
+  });
+
+  const rank = { critical: 0, serious: 1, warning: 2 };
+  alerts.sort((a, b) => rank[a.severity] - rank[b.severity]);
+
+  const flagged = new Set(alerts.map(a => a.vehicle));
+  FLAGGED_VEHICLES = flagged;
+
+  const list = document.getElementById('exceptionList');
+  if (!alerts.length) {
+    list.innerHTML = '<div class="exception-empty">✅ ไม่พบความผิดปกติที่เข้าเกณฑ์ในเดือนนี้</div>';
+    return;
+  }
+  const sevLabel = { critical: 'วิกฤต', serious: 'ต้องดู', warning: 'เฝ้าระวัง' };
+  list.innerHTML = alerts.map(a => `
+    <div class="exception-row ${a.severity}">
+      <span class="sev-icon">${a.icon}</span>
+      <span class="sev-label">${sevLabel[a.severity]}</span>
+      <span class="rule-name">${escapeHtml(a.rule)}</span>
+      <span class="veh-name">${escapeHtml(a.vehicle)}</span>
+      <span class="value-text">${escapeHtml(a.valueText)}</span>
+      <span class="threshold-text">${escapeHtml(a.thresholdText)}</span>
+    </div>
+  `).join('');
+}
+let FLAGGED_VEHICLES = new Set();
+
+// ---------------------------------------------------------------------
+// Zone 3a — Unified performance table with in-cell mini visualizations
+// ---------------------------------------------------------------------
+function barCellHtml(value, max, color, label) {
+  const w = max > 0 ? Math.max(2, Math.min(100, 100 * Math.abs(value) / max)) : 0;
+  return `<div class="cell-flex"><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${color}"></div></div><div class="cell-label">${label}</div></div>`;
+}
+function bulletCellHtml(cur, prev, max, color) {
+  const wCur = max > 0 ? Math.max(2, Math.min(100, 100 * cur / max)) : 0;
+  const markerPos = (prev !== null && max > 0) ? Math.max(0, Math.min(100, 100 * prev / max)) : null;
+  const marker = markerPos !== null ? `<div class="bar-marker" style="left:${markerPos}%"></div>` : '';
+  const prevLabel = prev !== null ? `ปีก่อน ${fmt(prev)}` : 'ไม่มีข้อมูลปีก่อน (คันใหม่)';
+  return `<div class="cell-flex"><div class="bar-track"><div class="bar-fill" style="width:${wCur}%;background:var(--series-1)"></div>${marker}</div><div class="cell-label">${fmt(cur)} ล. · ${prevLabel}</div></div>`;
+}
+function divergingCellHtml(value, maxAbs, c) {
+  const half = maxAbs > 0 ? Math.max(1, Math.min(50, 50 * Math.abs(value) / maxAbs)) : 0;
+  const color = value < 0 ? c.critical : c.good;
+  const style = value < 0 ? `right:50%;width:${half}%;background:${color}` : `left:50%;width:${half}%;background:${color}`;
+  return `<div class="cell-flex"><div class="bar-diverging"><div class="mid-line"></div><div class="seg" style="${style}"></div></div><div class="cell-label">${fmtSigned(value, 1)} ล.</div></div>`;
+}
+function stackCellHtml(cashPct, creditPct) {
+  return `<div class="cell-flex"><div class="stack-mini"><div style="width:${cashPct}%;background:var(--series-1)"></div><div style="width:${creditPct}%;background:var(--series-3)"></div></div><div class="cell-label">${fmt(cashPct, 0)}% : ${fmt(creditPct, 0)}%</div></div>`;
+}
+
+function renderTable(rowData) {
+  const c = COLORS();
+  let rows = rowData.filter(r => !STATE.search || r.vehicle.toLowerCase().includes(STATE.search));
+
+  const key = STATE.sortKey, dir = STATE.sortDir === 'asc' ? 1 : -1;
+  const sortVal = (r) => {
+    if (key === 'vehicle') return r.vehicle;
+    if (key === 'pct') return r.pct === null ? -Infinity : r.pct;
+    return r[key];
+  };
+  rows = [...rows].sort((a, b) => {
+    const va = sortVal(a), vb = sortVal(b);
+    if (typeof va === 'string') return va.localeCompare(vb) * dir;
+    return (va - vb) * dir;
+  });
+
+  document.querySelectorAll('#unifiedTable thead th').forEach(th => {
+    th.classList.toggle('sorted', th.getAttribute('data-key') === key);
+    const arrow = th.querySelector('.sort-arrow');
+    if (th.getAttribute('data-key') === key) arrow.textContent = dir === 1 ? '↑' : '↓'; else arrow.textContent = '↕';
+  });
+
+  const maxLiters = Math.max(1, ...rowData.map(r => Math.max(r.liters, r.litersPrev || 0)));
+  const maxGP = Math.max(1, ...rowData.map(r => Math.abs(r.gp)));
+  const maxGPL = Math.max(0.01, ...rowData.map(r => Math.abs(r.gpPerLiter)));
+  const maxCPL = Math.max(0.01, ...rowData.map(r => Math.abs(r.costPerLiter)));
+  const maxRepair = Math.max(1, ...rowData.map(r => r.repair));
+  const maxFuelRate = Math.max(0.01, ...rowData.map(r => r.fuelRate));
+  const maxFuelDiffAbs = Math.max(1, ...rowData.map(r => Math.abs(r.fuelDiff)));
+
+  const tbody = document.querySelector('#unifiedTable tbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:24px;">ไม่พบรถ/หน่วยที่ตรงกับคำค้นหา</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr class="${FLAGGED_VEHICLES.has(r.vehicle) ? 'flagged' : ''}">
+      <td><div class="veh-cell"><span class="bu-badge">${escapeHtml(r.bu)}</span><strong>${escapeHtml(r.vehicle)}</strong></div></td>
+      <td>${bulletCellHtml(r.liters, r.litersPrev, maxLiters)}</td>
+      <td style="color:${r.pct === null ? c.muted : (r.pct >= 0 ? c.good : c.critical)};font-weight:600;">
+        ${r.pct === null ? 'ใหม่' : (r.pct >= 0 ? '▲ ' : '▼ ') + fmt(Math.abs(r.pct), 1) + '%'}
+      </td>
+      <td>${divergingCellHtml(r.fuelDiff, maxFuelDiffAbs, c)}</td>
+      <td>${barCellHtml(r.gp, maxGP, c.s6, '฿' + fmt(r.gp))}</td>
+      <td>${barCellHtml(r.gpPerLiter, maxGPL, c.s3, fmt(r.gpPerLiter, 2) + ' บ./ล.')}</td>
+      <td>${barCellHtml(r.costPerLiter, maxCPL, c.s2, fmt(r.costPerLiter, 2) + ' บ./ล.')}</td>
+      <td>${barCellHtml(r.repair, maxRepair, c.s4, '฿' + fmt(r.repair) + (FLAGGED_VEHICLES.has(r.vehicle) ? ' 🔴' : ''))}</td>
+      <td>${barCellHtml(r.fuelRate, maxFuelRate, c.s1, fmt(r.fuelRate, 2) + ' กม./ล.')}</td>
+      <td>${stackCellHtml(r.cashPct, r.creditPct)}</td>
+    </tr>
+  `).join('');
+}
+
+// ---------------------------------------------------------------------
+// Zone 3b — Focus charts
+// ---------------------------------------------------------------------
+function renderScatter(rowData, c) {
+  destroyChart('scatter');
+  const bus = [...new Set(rowData.map(r => r.bu))];
+  const buColor = { [bus[0]]: c.s1, [bus[1]]: c.s3 };
+  const maxLiters = Math.max(1, ...rowData.map(r => r.liters));
+  const datasets = bus.map(bu => ({
+    label: bu,
+    data: rowData.filter(r => r.bu === bu).map(r => ({ x: r.repair, y: r.fuelRate, r: 4 + 14 * Math.sqrt(r.liters / maxLiters), vehicle: r.vehicle })),
+    backgroundColor: (buColor[bu] || c.s4) + 'b3',
+    borderColor: buColor[bu] || c.s4,
+    borderWidth: 1,
+  }));
+  CHARTS.scatter = new Chart(document.getElementById('scatterChart'), {
+    type: 'bubble',
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { title: { display: true, text: 'ค่าซ่อม (บาท)', color: c.muted, font: { size: 11 } }, grid: { color: c.grid }, ticks: { color: c.muted, font: { size: 11 } } },
+        y: { title: { display: true, text: 'อัตราการใช้น้ำมัน (กม./ล.)', color: c.muted, font: { size: 11 } }, grid: { color: c.grid }, ticks: { color: c.muted, font: { size: 11 } } },
+      },
+      plugins: {
+        legend: { display: true, position: 'top', align: 'end', labels: { color: c.textSecondary, boxWidth: 10, boxHeight: 10, font: { size: 11.5 }, usePointStyle: true, pointStyle: 'circle' } },
+        tooltip: {
+          backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1, padding: 10, cornerRadius: 8,
+          callbacks: { label: (ctx) => `${ctx.raw.vehicle}: ค่าซ่อม ฿${fmt(ctx.raw.x)}, ${fmt(ctx.raw.y, 2)} กม./ล.` },
+        },
+      },
+    },
+  });
+}
+
+function renderFuelDiffBig(rowData, c) {
+  destroyChart('fuelDiffBig');
+  const sorted = [...rowData].sort((a, b) => a.fuelDiff - b.fuelDiff);
+  const labels = sorted.map(r => r.vehicle);
+  const data = sorted.map(r => r.fuelDiff);
+  const colors = data.map(v => v < 0 ? c.critical : (v > 0 ? c.good : c.muted));
+  CHARTS.fuelDiffBig = new Chart(document.getElementById('fuelDiffBig'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'น้ำมันขาด-เกิน', data, backgroundColor: colors, borderRadius: 4, borderSkipped: false, barPercentage: 0.7, categoryPercentage: 0.75 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } },
+        y: { grid: { color: c.grid }, ticks: { color: c.muted, font: { size: 11 } }, border: { display: false } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1, padding: 10, cornerRadius: 8,
+          callbacks: { label: (ctx) => fmtSigned(ctx.parsed.y, 2) + ' ลิตร' },
+        },
+      },
+    },
+  });
+}
+
+function renderTrend(months, litersArr, gpArr, c) {
+  destroyChart('trendLiters'); destroyChart('trendGP');
+  const commonScale = { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 } },
+    y: { grid: { color: c.grid }, ticks: { color: c.muted, font: { size: 10 } }, border: { display: false } } };
+  const tooltipBase = { backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1, padding: 8, cornerRadius: 8 };
+  CHARTS.trendLiters = new Chart(document.getElementById('trendLiters'), {
+    type: 'line',
+    data: { labels: months, datasets: [{ data: litersArr, borderColor: c.s1, backgroundColor: c.s1 + '22', fill: true, borderWidth: 2, pointRadius: 2, tension: 0.25 }] },
+    options: { responsive: true, maintainAspectRatio: false, scales: commonScale, plugins: { legend: { display: false }, tooltip: { ...tooltipBase, callbacks: { label: (ctx) => fmt(ctx.parsed.y) + ' ลิตร' } } } },
+  });
+  CHARTS.trendGP = new Chart(document.getElementById('trendGP'), {
+    type: 'line',
+    data: { labels: months, datasets: [{ data: gpArr, borderColor: c.s6, backgroundColor: c.s6 + '22', fill: true, borderWidth: 2, pointRadius: 2, tension: 0.25 }] },
+    options: { responsive: true, maintainAspectRatio: false, scales: commonScale, plugins: { legend: { display: false }, tooltip: { ...tooltipBase, callbacks: { label: (ctx) => '฿' + fmt(ctx.parsed.y) } } } },
+  });
+}
+
+document.getElementById('refreshBtn').addEventListener('click', () => {
+  document.getElementById('loadingOverlay').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  loadData();
+});
+document.getElementById('themeBtn').addEventListener('click', () => {
+  const root = document.documentElement;
+  const cur = root.getAttribute('data-theme');
+  root.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+  if (RAW.length) renderAll();
+});
+
+bootstrap();
+</script>
+</body>
+</html>
