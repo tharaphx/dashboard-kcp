@@ -151,7 +151,7 @@
   .kpi-donut-wrap { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
   .kpi-donut-wrap canvas { max-width: 74px; max-height: 74px; }
 
-  /* ---------- Zone 2 ---------- */
+  /* ---------- Zone 5 (exceptions) ---------- */
   .exception-list { display: flex; flex-direction: column; gap: 11px; }
   .exception-row {
     display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
@@ -212,7 +212,7 @@
   .comp-legend .dot { width:7px; height:7px; border-radius:2px; display:inline-block; margin-right:3px; }
   .comp-total { font-size: 13.5px; color: var(--text-primary); font-weight:700; margin-top:1px; }
 
-  /* ---------- Zone 3b: focus charts ---------- */
+  /* ---------- Zone 2: focus charts ---------- */
   .focus-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 18px; }
   .chart-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
   .chart-card h3 { font-size: 15px; margin: 0 0 4px; font-weight: 700; }
@@ -338,31 +338,7 @@
   </section>
 
   <section class="block">
-    <h2 class="block-title"><span class="zone-tag">ZONE 2</span> จุดที่ควรเฝ้าระวัง <span class="n" id="excTitle"></span></h2>
-    <div class="exception-list" id="exceptionList"></div>
-  </section>
-
-  <section class="block">
-    <h2 class="block-title"><span class="zone-tag">ZONE 3</span> ตารางประสิทธิภาพรายเส้นทาง (Route ID) <span class="n" id="vehTitle"></span></h2>
-    <div class="card full-table-wrap">
-      <table class="data-table" id="unifiedTable">
-        <thead>
-          <tr>
-            <th data-key="routeId">Route ID <span class="sort-arrow">↕</span></th>
-            <th data-key="liters">ยอดขาย &amp; ผลต่างน้ำมัน <span class="sort-arrow">↕</span></th>
-            <th data-key="gp">ผลประกอบการกำไร <span class="sort-arrow">↕</span></th>
-            <th data-key="repair">ค่าซ่อม &amp; ประสิทธิภาพน้ำมัน <span class="sort-arrow">↕</span></th>
-            <th data-key="cashPct" style="text-align:center;">เงินสด : เงินเชื่อ (เทียบเป้า) <span class="sort-arrow">↕</span></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <div class="foot-note">แถวคือ 1 Route ID · ชื่อรถใต้ Route ID = รถที่วิ่งเส้นทางนี้ในเดือนที่เลือก (สลับรถได้ตามจริง) · แถวที่มีแถบสีแดงด้านซ้าย = เส้นทางนี้ติดอยู่ในรายการเฝ้าระวัง (Zone 2) อย่างน้อย 1 ข้อ · แถว "ไม่มี Route ID" = ยังไม่ได้กรอก Route ID ในชีตต้นทาง ระบบใช้ชื่อรถแทนไปก่อน</div>
-    </div>
-  </section>
-
-  <section class="block">
-    <h2 class="block-title"><span class="zone-tag">ZONE 3</span> กราฟเจาะลึกที่ตารางแทนไม่ได้</h2>
+    <h2 class="block-title"><span class="zone-tag">ZONE 2</span> กราฟเจาะลึกที่ตารางแทนไม่ได้</h2>
     <div class="focus-grid">
       <div class="chart-card">
         <h3>ความสัมพันธ์ ค่าซ่อม vs อัตราการใช้น้ำมัน</h3>
@@ -389,6 +365,25 @@
         <div class="desc">รวมทุกเส้นทางตามตัวกรอง BU ปัจจุบัน</div>
         <div class="chart-wrap"><canvas id="trendGP"></canvas></div>
       </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title"><span class="zone-tag">ZONE 3</span> ตารางประสิทธิภาพรายเส้นทาง (Route ID) <span class="n" id="vehTitle"></span></h2>
+    <div class="card full-table-wrap">
+      <table class="data-table" id="unifiedTable">
+        <thead>
+          <tr>
+            <th data-key="routeId">Route ID <span class="sort-arrow">↕</span></th>
+            <th data-key="liters">ยอดขาย &amp; ผลต่างน้ำมัน <span class="sort-arrow">↕</span></th>
+            <th data-key="gp">ผลประกอบการกำไร <span class="sort-arrow">↕</span></th>
+            <th data-key="repair">ค่าซ่อม &amp; ประสิทธิภาพน้ำมัน <span class="sort-arrow">↕</span></th>
+            <th data-key="cashPct" style="text-align:center;">เงินสด : เงินเชื่อ (เทียบเป้า) <span class="sort-arrow">↕</span></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="foot-note">แถวคือ 1 Route ID · ชื่อรถใต้ Route ID = รถที่วิ่งเส้นทางนี้ในเดือนที่เลือก (สลับรถได้ตามจริง) · แถวที่มีแถบสีแดงด้านซ้าย = เส้นทางนี้ติดอยู่ในรายการเฝ้าระวัง (Zone 5) อย่างน้อย 1 ข้อ · แถว "ไม่มี Route ID" = ยังไม่ได้กรอก Route ID ในชีตต้นทาง ระบบใช้ชื่อรถแทนไปก่อน</div>
     </div>
   </section>
 
@@ -445,6 +440,11 @@
     </div>
     <div id="repairAccordionWrap" style="display:none;"></div>
     <div class="foot-note">"ประเภทงาน" (อะไหล่ / ค่าแรง / ยาง) จัดหมวดอัตโนมัติจากคำในชื่อรายการซ่อม อาจไม่ตรง 100% — ถ้าต้องการความแม่นยำเต็มที่ แนะนำเพิ่มคอลัมน์ "ประเภทงาน" ในชีต "ซ่อมบำรุง" โดยตรง</div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title"><span class="zone-tag">ZONE 5</span> จุดที่ควรเฝ้าระวัง <span class="n" id="excTitle"></span></h2>
+    <div class="exception-list" id="exceptionList"></div>
   </section>
 
 </main>
@@ -920,7 +920,7 @@ function renderAll() {
 }
 
 // ---------------------------------------------------------------------
-// Zone 2 — exception rules
+// Zone 5 — exception rules
 // ---------------------------------------------------------------------
 function renderExceptions(rowData, c) {
   const alerts = [];
@@ -1113,7 +1113,7 @@ function renderTable(rowData) {
 }
 
 // ---------------------------------------------------------------------
-// Zone 3b — Focus charts
+// Zone 2 — Focus charts
 // ---------------------------------------------------------------------
 function renderScatter(rowData, c) {
   destroyChart('scatter');
