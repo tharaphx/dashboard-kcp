@@ -252,7 +252,8 @@
   }
   .data-table th.sorted { color: var(--text-primary); }
   .data-table th .sort-arrow { font-size: 11px; margin-left: 3px; opacity: .6; }
-  .data-table td { padding: 16px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .data-table td { padding: 22px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .hint-underline { text-decoration: underline dotted var(--text-muted); text-decoration-thickness: 1px; cursor: help; }
   .data-table tbody tr:hover { background: var(--page-plane); }
   .data-table tr.flagged td:first-child { box-shadow: inset 4px 0 0 var(--critical); }
   .veh-cell { display:flex; align-items:center; gap:8px; white-space: nowrap; }
@@ -1349,23 +1350,27 @@ function targetBulletCellHtml(actual, target, max, color, unit = '', decimals = 
 // when healthy (>= 1.50 บ./ล., adjustable) or orange when thin but still positive;
 // red if the route is actually losing money per liter.
 const GP_PER_LITER_HEALTHY = 1.50;
+// Primary line = total gross profit; secondary line shows only กำไร/ลิตร (the
+// figure people actually scan for), with ราคาขาย/ลิตร and ต้นทุน/ลิตร moved
+// into a hover tooltip (native title attr) instead of cluttering the row.
 function financialsCellHtml(gp, costPerLiter, gpPerLiter) {
   const sellPerLiter = costPerLiter + gpPerLiter;
   const gplColor = gpPerLiter < 0 ? 'var(--critical)' : (gpPerLiter >= GP_PER_LITER_HEALTHY ? 'var(--good)' : 'var(--series-2)');
+  const tooltip = `ราคาขาย/ลิตร ฿${fmt(sellPerLiter, 2)} · ต้นทุน/ลิตร ฿${fmt(costPerLiter, 2)}`;
   return `<div class="cell-flex">
     <div class="text-primary-strong">฿${fmt(gp)}</div>
-    <div class="cell-label" style="white-space:normal;max-width:260px;">ราคาขาย/ลิตร ${fmt(sellPerLiter, 2)} &nbsp;|&nbsp; ต้นทุน/ลิตร ${fmt(costPerLiter, 2)} &nbsp;|&nbsp; กำไร/ลิตร <b style="color:${gplColor}">${fmt(gpPerLiter, 2)}</b></div>
+    <div class="cell-label"><span class="hint-underline" title="${escapeHtml(tooltip)}">กำไร <b style="color:${gplColor}">฿${fmt(gpPerLiter, 2)}</b>/ล.</span></div>
   </div>`;
 }
 // Merged "ค่าซ่อม & ประสิทธิภาพน้ำมัน (Maintenance & Efficiency)" cell — no
-// bar/sparkline (per the approved mockup). ยอดค่าซ่อม > ฿10,000 is bolded red
-// with a ⚠️ icon; the fuel-rate line colors green/red against its per-route
-// target when one exists.
+// bar/sparkline. ยอดค่าซ่อม > ฿10,000 renders as bold red text with a ⚠️ icon
+// (no solid pill background, per the low-noise redesign); the fuel-rate line
+// colors green/red against its per-route target when one exists.
 const REPAIR_COST_WARN_THB = 10000;
 function maintenanceCellHtml(repair, fuelRate, targetFuelRate) {
   const hot = repair > REPAIR_COST_WARN_THB;
   const repairLine = hot
-    ? `<div><span class="verdict critical">⚠️ ฿${fmt(repair)}</span></div>`
+    ? `<div><span style="font-weight:800;color:var(--critical);">⚠️ ฿${fmt(repair)}</span></div>`
     : `<div class="text-primary-strong">฿${fmt(repair)}</div>`;
   let fuelLine;
   if (targetFuelRate !== null && targetFuelRate !== undefined && targetFuelRate > 0) {
@@ -1376,10 +1381,16 @@ function maintenanceCellHtml(repair, fuelRate, targetFuelRate) {
   }
   return `<div class="cell-flex">${repairLine}${fuelLine}</div>`;
 }
+// Cash-target gap is a plain percentage-POINT difference (cashPct - targetCashPct),
+// so it is mathematically bounded to roughly ±100 already. As a guard against a
+// bad/corrupted value in the Targets sheet ever producing an absurd number like
+// "1,966.7%", anything outside a sane ±100pt range is treated as "ไม่มีเป้า"
+// rather than displayed as-is.
+const CASH_GAP_SANITY_LIMIT = 100;
 function cashCreditCellHtml(cashPct, creditPct, targetCashPct, cashPctGap, c) {
   const ratioText = `<div class="text-primary-strong" style="text-align:center;">${fmt(cashPct, 0)}% : ${fmt(creditPct, 0)}%</div>`;
   let verdict = '';
-  if (targetCashPct != null) {
+  if (targetCashPct != null && Math.abs(cashPctGap) <= CASH_GAP_SANITY_LIMIT) {
     const good = cashPctGap >= 0;
     verdict = `<div class="cell-label" style="text-align:center;"><span style="color:${good ? 'var(--good)' : 'var(--critical)'};font-weight:600;">${good ? '▲' : '▼'} เงินสด${good ? 'เกินเป้า' : 'ต่ำกว่าเป้า'} ${fmt(Math.abs(cashPctGap), 1)}%</span></div>`;
   } else {
