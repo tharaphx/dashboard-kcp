@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fuel Ops Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --page-plane:      #f2f1ec;
@@ -86,7 +88,7 @@
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--page-plane); color: var(--text-primary);
-    font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    font-family: 'Prompt', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
     font-size: 16px; /* enlarged base per the "easier to read" redesign */
   }
   #loadingOverlay {
@@ -293,6 +295,36 @@
   .chart-card .desc { font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px; }
   .chart-wrap { height: 240px; }
 
+  /* Zone 2 "Modern Vibrant" redesign — deliberately more colorful than the
+     rest of the dashboard (Zone 1/3/4/5 stay low-noise/muted). Scoped to
+     .zone2-vibrant so it never touches .chart-card/.focus-grid used elsewhere
+     (e.g. Zone 4's repair YTD charts). */
+  .zone2-vibrant .focus-grid { grid-template-columns: repeat(2, 1fr); }
+  .zone2-vibrant .chart-card {
+    position: relative; border-radius: 20px; padding: 22px 22px 18px;
+    box-shadow: 0 1px 3px rgba(16,24,60,.06); transition: box-shadow .2s, transform .2s;
+  }
+  .zone2-vibrant .chart-card:hover { box-shadow: 0 10px 30px rgba(16,24,60,.10); transform: translateY(-2px); }
+  .zone2-vibrant .chart-card h3 { padding-right: 100px; }
+  .zone2-vibrant .chart-card .desc { padding-right: 100px; }
+  .zone2-vibrant .chart-wrap { height: 260px; }
+  .zone2-vibrant .full-span { grid-column: 1 / -1; }
+  .zone2-vibrant .badge-highlight {
+    position: absolute; top: 20px; right: 20px; text-align: right; padding: 5px 12px; border-radius: 20px;
+    font-size: 11.5px; font-weight: 700; white-space: nowrap;
+  }
+  @media (max-width: 900px) { .zone2-vibrant .focus-grid { grid-template-columns: 1fr; } .zone2-vibrant .full-span { grid-column: auto; } }
+
+  #z2Tooltip {
+    position: fixed; pointer-events: none; opacity: 0; transition: opacity .1s ease;
+    background: color-mix(in srgb, var(--surface-1) 72%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; box-shadow: 0 8px 24px rgba(16,24,60,.18);
+    font-size: 12.5px; color: var(--text-primary); min-width: 140px; z-index: 20;
+  }
+  #z2Tooltip .tt-title { font-weight: 700; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+  #z2Tooltip .tt-row { display:flex; align-items:center; gap:6px; font-weight: 700; }
+  #z2Tooltip .tt-dot { width:8px; height:8px; border-radius:50%; }
+
   /* ---------- Zone 4 ---------- */
   .repair-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 20px; }
   .repair-kpi-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
@@ -451,31 +483,38 @@
     </div>
 
     <h3 class="block-subtitle"><span class="zone-tag">ZONE 2</span> กราฟเจาะลึกที่ตารางแทนไม่ได้</h3>
-    <div class="focus-grid">
-      <div class="chart-card">
-        <h3>ความสัมพันธ์ ค่าซ่อม vs อัตราการใช้น้ำมัน</h3>
-        <div class="desc">แต่ละจุด = 1 เส้นทาง (Route ID) · ขนาดจุด = ยอดขายลิตร · สี = BU</div>
-        <div class="chart-wrap"><canvas id="scatterChart"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <h3>จำนวนเที่ยววิ่งรายเส้นทางประจำเดือน</h3>
-        <div class="desc">แสดงเฉพาะเส้นทางที่มีเที่ยววิ่ง (&gt; 0)</div>
-        <div class="chart-wrap"><canvas id="tripsChart"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <h3>น้ำมันขาด/เกิน (%) รายเส้นทาง</h3>
-        <div class="desc">เรียงจากขาดมากสุดไปเกินมากสุด</div>
-        <div class="chart-wrap"><canvas id="fuelDiffBig"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <h3>ยอดขายลิตรย้อนหลัง 12 เดือน</h3>
-        <div class="desc">รวมทุกเส้นทางตามตัวกรอง BU ปัจจุบัน</div>
-        <div class="chart-wrap"><canvas id="trendLiters"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <h3>กำไรขั้นต้นย้อนหลัง 12 เดือน</h3>
-        <div class="desc">รวมทุกเส้นทางตามตัวกรอง BU ปัจจุบัน</div>
-        <div class="chart-wrap"><canvas id="trendGP"></canvas></div>
+    <div class="zone2-vibrant">
+      <div class="focus-grid">
+        <div class="chart-card full-span">
+          <div class="badge-highlight" id="z2BadgeLiters" style="color:#2563eb;background:rgba(37,99,235,.1);"></div>
+          <h3>ยอดขายลิตรย้อนหลัง 12 เดือน</h3>
+          <div class="desc">รวมทุกเส้นทางตามตัวกรอง BU ปัจจุบัน</div>
+          <div class="chart-wrap"><canvas id="trendLiters"></canvas></div>
+        </div>
+        <div class="chart-card full-span">
+          <div class="badge-highlight" id="z2BadgeGP" style="color:#10b981;background:rgba(16,185,129,.1);"></div>
+          <h3>กำไรขั้นต้นย้อนหลัง 12 เดือน</h3>
+          <div class="desc">รวมทุกเส้นทางตามตัวกรอง BU ปัจจุบัน</div>
+          <div class="chart-wrap"><canvas id="trendGP"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="badge-highlight" id="z2BadgeTrips" style="color:#6366f1;background:rgba(99,102,241,.1);"></div>
+          <h3>จำนวนเที่ยววิ่งรายเส้นทางประจำเดือน</h3>
+          <div class="desc">แสดงเฉพาะเส้นทางที่มีเที่ยววิ่ง (&gt; 0)</div>
+          <div class="chart-wrap"><canvas id="tripsChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="badge-highlight" id="z2BadgeFuelDiff" style="color:#fb7185;background:rgba(251,113,133,.12);"></div>
+          <h3>น้ำมันขาด/เกิน (%) รายเส้นทาง</h3>
+          <div class="desc">เรียงจากขาดมากสุดไปเกินมากสุด · แถบเขียวอ่อน = ช่วงในเกณฑ์ปกติ</div>
+          <div class="chart-wrap"><canvas id="fuelDiffBig"></canvas></div>
+        </div>
+        <div class="chart-card full-span">
+          <div class="badge-highlight" id="z2BadgeScatter" style="color:var(--text-secondary);background:color-mix(in srgb, var(--text-secondary) 10%, transparent);"></div>
+          <h3>ความสัมพันธ์ ค่าซ่อม vs อัตราการใช้น้ำมัน</h3>
+          <div class="desc">แต่ละจุด = 1 เส้นทาง (Route ID) · ขนาดจุด = ยอดขายลิตร · สี = BU</div>
+          <div class="chart-wrap"><canvas id="scatterChart"></canvas></div>
+        </div>
       </div>
     </div>
   </section>
@@ -618,6 +657,8 @@
 
 </main>
 </div>
+
+<div id="z2Tooltip"></div>
 
 <script>
 function loadScriptWithFallback(paths, testFn) {
@@ -1438,33 +1479,62 @@ function renderTable(rowData) {
 }
 
 // ---------------------------------------------------------------------
-// Zone 2 — Focus charts
+// Zone 2 — Focus charts ("Modern Vibrant" redesign — intentionally more
+// colorful than the rest of the dashboard; see .zone2-vibrant in <style>)
 // ---------------------------------------------------------------------
+const Z2_COLORS = { blue: '#2563eb', cyan: '#06b6d4', emerald: '#10b981', indigo: '#6366f1', coral: '#fb7185', coralLight: '#fecdd3' };
+// Shared glassmorphism tooltip (external, so we can blur/round it like the
+// approved mockup — Chart.js's built-in tooltip can't do backdrop-filter).
+function z2ExternalTooltip(context) {
+  const { chart, tooltip } = context;
+  const el = document.getElementById('z2Tooltip');
+  if (tooltip.opacity === 0) { el.style.opacity = 0; return; }
+  const dp = (tooltip.dataPoints || []).filter(d => d.dataset.z2Skip !== true);
+  if (!dp.length) { el.style.opacity = 0; return; }
+  let html = `<div class="tt-title">${escapeHtml(String(tooltip.title[0] || ''))}</div>`;
+  dp.forEach(d => {
+    const color = d.dataset.borderColor || d.dataset.backgroundColor || '#666';
+    html += `<div class="tt-row"><span class="tt-dot" style="background:${typeof color === 'string' ? color : '#666'};"></span>${d.dataset.z2Label ? escapeHtml(d.dataset.z2Label(d)) : escapeHtml(d.formattedValue)}</div>`;
+  });
+  el.innerHTML = html;
+  const canvasRect = chart.canvas.getBoundingClientRect();
+  el.style.opacity = 1;
+  el.style.left = (canvasRect.left + tooltip.caretX + 12) + 'px';
+  el.style.top = (canvasRect.top + tooltip.caretY - 10) + 'px';
+}
+function z2VGradient(ctx, area, colorTop, colorBottom) {
+  const g = ctx.createLinearGradient(0, area.top, 0, area.bottom);
+  g.addColorStop(0, colorTop); g.addColorStop(1, colorBottom);
+  return g;
+}
+const z2GridStyle = (c) => ({ color: c.grid, borderDash: [4, 4] });
+
 function renderScatter(rowData, c) {
   destroyChart('scatter');
+  document.getElementById('z2BadgeScatter').textContent = `${rowData.length} เส้นทาง`;
   const bus = [...new Set(rowData.map(r => r.bu))];
-  const colorSeq = [c.s1, c.s2, c.s3, c.s4, c.s7, c.s5];
-  const buColor = {};
-  bus.forEach((bu, i) => { buColor[bu] = colorSeq[i % colorSeq.length]; });
+  const bubbleColors = [Z2_COLORS.blue, Z2_COLORS.coral, Z2_COLORS.emerald, Z2_COLORS.indigo];
   const maxLiters = Math.max(1, ...rowData.map(r => r.liters));
   CHARTS.scatter = new Chart(document.getElementById('scatterChart'), {
     type: 'bubble',
-    data: { datasets: bus.map(bu => ({
+    data: { datasets: bus.map((bu, i) => ({
       label: bu,
       data: rowData.filter(r => r.bu === bu).map(r => ({ x: r.repair, y: r.fuelRate, r: 4 + 14 * Math.sqrt(r.liters / maxLiters), routeId: r.routeId, vehicle: r.vehicle })),
-      backgroundColor: buColor[bu] + 'cc',
+      backgroundColor: color_mix_alpha(bubbleColors[i % bubbleColors.length], 0.45),
+      borderColor: bubbleColors[i % bubbleColors.length], borderWidth: 1.5,
+      z2Label: (dp) => { const d = dp.raw; return `ค่าซ่อม ฿${fmt(d.x)} · ${fmt(d.y, 2)} กม./ล.`; },
     })) },
     options: {
       responsive: true, maintainAspectRatio: false,
       scales: {
-        x: { title: { display: true, text: 'ค่าซ่อม (฿)', color: c.muted }, ticks: { color: c.muted }, grid: { color: c.grid } },
-        y: { title: { display: true, text: 'อัตราการใช้น้ำมัน (กม./ล.)', color: c.muted }, ticks: { color: c.muted }, grid: { color: c.grid } },
+        x: { title: { display: true, text: 'ค่าซ่อม (฿)', color: c.muted }, ticks: { color: c.muted }, grid: z2GridStyle(c) },
+        y: { title: { display: true, text: 'อัตราการใช้น้ำมัน (กม./ล.)', color: c.muted }, ticks: { color: c.muted }, grid: z2GridStyle(c) },
       },
       plugins: {
         legend: { position: 'bottom', labels: { color: c.textSecondary } },
         tooltip: {
-          backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1,
-          callbacks: { label: (ctx) => { const d = ctx.raw; return `${d.routeId} (${d.vehicle}) · ค่าซ่อม ฿${fmt(d.x)} · ${fmt(d.y, 2)} กม./ล.`; } },
+          enabled: false, external: z2ExternalTooltip,
+          callbacks: { title: (items) => { const d = items[0].raw; return `${d.routeId} (${d.vehicle})`; } },
         },
       },
     },
@@ -1473,30 +1543,47 @@ function renderScatter(rowData, c) {
 function renderTrips(rowData, c) {
   destroyChart('tripsChart');
   const sorted = rowData.filter(r => r.trips > 0).sort((a, b) => b.trips - a.trips);
+  document.getElementById('z2BadgeTrips').textContent = sorted.length ? `สูงสุด: ${sorted[0].routeId}` : '-';
   const labels = sorted.map(r => r.routeId);
   const data = sorted.map(r => r.trips);
   CHARTS.tripsChart = new Chart(document.getElementById('tripsChart'), {
     type: 'bar',
-    data: { labels, datasets: [{ label: 'จำนวนเที่ยววิ่ง', data, backgroundColor: c.s1, borderRadius: 4, borderSkipped: false, barPercentage: 0.7, categoryPercentage: 0.75 }] },
+    data: { labels, datasets: [{
+      label: 'จำนวนเที่ยววิ่ง', data, borderRadius: 8, borderSkipped: false, barPercentage: 0.7, categoryPercentage: 0.75,
+      backgroundColor: (ctx) => { const { chartArea } = ctx.chart; if (!chartArea) return Z2_COLORS.indigo;
+        const g = ctx.chart.ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+        g.addColorStop(0, Z2_COLORS.indigo); g.addColorStop(1, Z2_COLORS.cyan); return g; },
+      z2Label: (dp) => `${fmt(dp.raw)} เที่ยว`,
+    }] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 12 } } }, y: { grid: { color: c.grid }, ticks: { color: c.muted, font: { size: 12 } }, border: { display: false } } },
-      plugins: { legend: { display: false }, tooltip: { backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1, padding: 10, cornerRadius: 8, callbacks: { label: (ctx) => fmt(ctx.parsed.y) + ' เที่ยว' } } },
+      scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 12 } } }, y: { grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 12 } }, border: { display: false } } },
+      plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
     },
   });
 }
 function renderFuelDiffBig(rowData, c) {
   destroyChart('fuelDiffBig');
   const sorted = [...rowData].sort((a, b) => a.fuelDiffPct - b.fuelDiffPct);
+  if (sorted.length) document.getElementById('z2BadgeFuelDiff').textContent = `แย่สุด: ${fmtSigned(sorted[0].fuelDiffPct, 1)}%`;
   const labels = sorted.map(r => r.routeId);
   const data = sorted.map(r => r.fuelDiffPct);
+  const safeBand = labels.map(() => FUEL_DIFF_TOLERANCE_PCT);
   CHARTS.fuelDiffBig = new Chart(document.getElementById('fuelDiffBig'), {
     type: 'bar',
-    data: { labels, datasets: [{ data, backgroundColor: data.map(v => v < 0 ? c.critical : c.good), borderRadius: 4 }] },
+    data: { labels, datasets: [
+      { label: 'เกณฑ์ปกติ', data: safeBand, backgroundColor: color_mix_alpha(c.good, 0.12), borderWidth: 0, barPercentage: 1, categoryPercentage: 1, order: 2, z2Skip: true },
+      { label: 'เกณฑ์ปกติ (ขาด)', data: safeBand.map(v => -v), backgroundColor: color_mix_alpha(c.good, 0.12), borderWidth: 0, barPercentage: 1, categoryPercentage: 1, order: 2, z2Skip: true },
+      { label: 'น้ำมันขาด/เกิน', data, borderRadius: 6, order: 1, z2Label: (dp) => `${fmtSigned(dp.raw, 2)}%`,
+        backgroundColor: (ctx) => { const { chartArea } = ctx.chart; if (!chartArea) return Z2_COLORS.coral;
+          const g = ctx.chart.ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          g.addColorStop(0, Z2_COLORS.coral); g.addColorStop(1, Z2_COLORS.coralLight); return g; },
+      },
+    ] },
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      scales: { x: { grid: { color: c.grid }, ticks: { color: c.muted, callback: v => v + '%' } }, y: { grid: { display: false }, ticks: { color: c.muted, font: { size: 12 } } } },
-      plugins: { legend: { display: false }, tooltip: { backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1, callbacks: { label: (ctx) => fmtSigned(ctx.parsed.x, 2) + '%' } } },
+      scales: { x: { grid: z2GridStyle(c), ticks: { color: c.muted, callback: v => v + '%' } }, y: { grid: { display: false }, ticks: { color: c.muted, font: { size: 12 } } } },
+      plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
     },
   });
 }
@@ -1504,18 +1591,45 @@ function renderTrend(ym, bu, c) {
   const trailMonths = monthsTrailing(ym, 12);
   const litersArr = trailMonths.map(m => { const rs = getRows(m, bu); return sum(rs, 'cashL') + sum(rs, 'creditL'); });
   const gpArr = trailMonths.map(m => sum(getRows(m, bu), 'grossProfit'));
+  const maxLitersIdx = litersArr.indexOf(Math.max(...litersArr));
+  document.getElementById('z2BadgeLiters').textContent = `Peak: ${fmt(litersArr[maxLitersIdx])} ล. (${trailMonths[maxLitersIdx]})`;
+  document.getElementById('z2BadgeGP').textContent = `เฉลี่ย: ฿${fmt(avg(gpArr))}`;
+
   destroyChart('trendLiters');
   CHARTS.trendLiters = new Chart(document.getElementById('trendLiters'), {
     type: 'line',
-    data: { labels: trailMonths, datasets: [{ data: litersArr, borderColor: c.s1, backgroundColor: c.s1 + '22', fill: true, tension: 0.3, pointRadius: 0 }] },
-    options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } }, y: { grid: { color: c.grid }, ticks: { color: c.muted, font: { size: 11 } } } }, plugins: { legend: { display: false }, tooltip: { backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1 } } },
+    data: { labels: trailMonths, datasets: [{
+      data: litersArr, borderColor: Z2_COLORS.cyan, borderWidth: 3, tension: 0.4, pointRadius: 0, pointHoverRadius: 5,
+      pointBackgroundColor: Z2_COLORS.cyan, fill: true, z2Label: (dp) => `${fmt(dp.raw)} ลิตร`,
+      backgroundColor: (ctx) => { const { chartArea } = ctx.chart; if (!chartArea) return; return z2VGradient(ctx.chart.ctx, chartArea, color_mix_alpha(Z2_COLORS.cyan, 0.32), color_mix_alpha(Z2_COLORS.cyan, 0)); },
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } }, y: { grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 11 }, callback: (v) => (v / 1000) + 'k' } } },
+      plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
+    },
   });
   destroyChart('trendGP');
   CHARTS.trendGP = new Chart(document.getElementById('trendGP'), {
     type: 'line',
-    data: { labels: trailMonths, datasets: [{ data: gpArr, borderColor: c.s6, backgroundColor: c.s6 + '22', fill: true, tension: 0.3, pointRadius: 0 }] },
-    options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } }, y: { grid: { color: c.grid }, ticks: { color: c.muted, font: { size: 11 } } } }, plugins: { legend: { display: false }, tooltip: { backgroundColor: c.surface, titleColor: c.text, bodyColor: c.textSecondary, borderColor: c.grid, borderWidth: 1 } } },
+    data: { labels: trailMonths, datasets: [{
+      data: gpArr, borderColor: Z2_COLORS.emerald, borderWidth: 3, tension: 0.4, pointRadius: 0, pointHoverRadius: 5,
+      pointBackgroundColor: Z2_COLORS.emerald, fill: true, z2Label: (dp) => `฿${fmt(dp.raw)}`,
+      backgroundColor: (ctx) => { const { chartArea } = ctx.chart; if (!chartArea) return; return z2VGradient(ctx.chart.ctx, chartArea, color_mix_alpha(Z2_COLORS.emerald, 0.30), color_mix_alpha(Z2_COLORS.emerald, 0)); },
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { x: { grid: { display: false }, ticks: { color: c.muted, font: { size: 11 } } }, y: { grid: z2GridStyle(c), ticks: { color: c.muted, font: { size: 11 }, callback: (v) => '฿' + (v / 1000) + 'k' } } },
+      plugins: { legend: { display: false }, tooltip: { enabled: false, external: z2ExternalTooltip } },
+    },
   });
+}
+// Small helper: apply an alpha to a "#rrggbb" hex color without needing a
+// full color library — used for the Zone 2 vibrant gradients/tooltips.
+function color_mix_alpha(hex, alpha) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 // ---------------------------------------------------------------------
